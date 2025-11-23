@@ -127,10 +127,6 @@ function init(){
   document.getElementById('exam').value = p.data.exam||'';
   document.getElementById('plan').value = p.data.plan||'';
   document.getElementById('treatment').value = p.data.treatment||'';
-  s = appendFacultyList(s);
-document.getElementById('summary').innerText = s;
-return s;
-
   document.getElementById('entryDate').value = new Date().toISOString().slice(0,10);
   renderEntries();
   renderInv();
@@ -220,7 +216,9 @@ function generate(){
   s += `--- Investigations ---\n`;
   (p.data.investigations||[]).forEach(i=>{ s += `${i.date} | ${i.test} | ${i.result||''} | ${i.notes||''}\n`; });
   s += `\nTreatment:\n${p.data.treatment||''}\n\n(Uploaded templates available in assets)`;
-  document.getElementById('summary').innerText = s;
+   s = appendFacultyList(s);
+document.getElementById('summary').innerText = s;
+return s;
 }
 
 function printSummary(){ generate(); window.print(); }
