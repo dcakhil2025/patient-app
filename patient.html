@@ -34,8 +34,25 @@ input, textarea, select{width:100%;padding:8px;margin:6px 0;border:1px solid #cc
     <label>Chief Complaints</label>
     <textarea id="chief"></textarea>
 
-    <label>Diagnosis</label>
-    <textarea id="chief"></textarea>
+    <!-- Diagnosis Section -->
+<section>
+  <h3>Diagnosis</h3>
+
+  <!-- Display mode -->
+  <div id="diagDisplay" style="display:flex;align-items:center;gap:8px;">
+    <div id="diagText" style="font-weight:700;color:#222;"></div>
+    <button class="btn" onclick="editDiagnosis()">Edit</button>
+  </div>
+
+  <!-- Edit mode -->
+  <div id="diagEdit" style="display:none;margin-top:8px;">
+    <input id="diagInput" placeholder="Enter diagnosis…" style="width:100%;padding:8px;">
+    <div style="margin-top:6px;">
+      <button class="btn" onclick="saveDiagnosis()">Save</button>
+      <button class="btn" onclick="cancelDiagnosis()" style="background:#777;">Cancel</button>
+    </div>
+  </div>
+</section>
 
 
     <label>History of Presenting Illness (HOPI)</label>
@@ -130,6 +147,33 @@ function init(){
   document.getElementById('entryDate').value = new Date().toISOString().slice(0,10);
   renderEntries();
   renderInv();
+  loadDiagnosisUI();
+
+}
+function loadDiagnosisUI() {
+  document.getElementById("diagText").innerText = p.diagnosis || "(not specified)";
+  document.getElementById("diagInput").value = p.diagnosis || "";
+}
+
+function editDiagnosis() {
+  document.getElementById("diagDisplay").style.display = "none";
+  document.getElementById("diagEdit").style.display = "block";
+}
+
+function cancelDiagnosis() {
+  document.getElementById("diagEdit").style.display = "none";
+  document.getElementById("diagDisplay").style.display = "flex";
+}
+
+function saveDiagnosis() {
+  const val = document.getElementById("diagInput").value.trim();
+  p.diagnosis = val;
+  pts[id] = p;
+  localStorage.setItem("patients", JSON.stringify(pts));
+
+  loadDiagnosisUI();
+  cancelDiagnosis();
+  alert("Diagnosis updated");
 }
 
 function saveAll(){
