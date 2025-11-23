@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Investigations - Vertical Table (Updated)</title>
+<style>
+  body{font-family:Arial;padding:16px;background:#f7f8fa}
+  .container{max-width:1100px;margin:0 auto;background:#fff;padding:16px;border-radius:8px;border:1px solid #e6e6e6}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #ccc;padding:6px;text-align:left;vertical-align:top}
+  th.sticky{position:sticky;left:0;background:#fafafa;z-index:2}
+  td.first{background:#fafafa;min-width:220px;font-weight:600}
+  .controls{margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap}
+  input[type=text], input[type=date], textarea{width:100%;box-sizing:border-box;padding:6px}
+  button{padding:8px 10px;border-radius:6px;border:none;background:#0066cc;color:#fff;cursor:pointer}
+  .small{font-size:0.9em;color:#555}
+  .muted{color:#666;font-size:0.9em}
+  .custom-name{width:100%;border:none;background:transparent;font-weight:600}
+</style>
+</head>
+<body>
+<div class="container">\n  <div id="patientContext" style="margin-bottom:8px;color:#333;"></div>
+  <h2>Investigations — Vertical table (date columns)</h2>
+  <div class="controls">
+    <button onclick="addDateColumn()">➕ Add date column (enter date)</button>
+    <button onclick="addTodayColumn()">➕ Add today column</button>
+    <button onclick="addCustomTest()">➕ Add custom test</button>
+    <button onclick="exportCSV()">⬇️ Export CSV</button>
+    <button onclick="save()">💾 Save (localStorage)</button>
+    <button onclick="load()">🔁 Load</button>
+    <span class="muted"> — Add columns for each investigation date; enter values in the cells. Custom tests are saved separately.</span>
+  </div>
+
+  <div style="overflow:auto;">
+  <table id="invTable">
+    <thead id="thead">
+      <tr>
+        <th class="sticky">Test</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+    </tbody>
+  </table>
+  </div>
+  <p class="small">Saved data is stored in your browser. Use Export CSV to download a CSV of the table.</p>
+</div>
+
+<script>
+const defaultTests = ["Hb", "PCV", "TLC", "DLC", "Platelets", "MCV", "MCH", "MCHC", "Peripheral Smear", "Smear Date", "Blood glucose", "Urea", "Creatinine", "Na", "K", "Cl", "Total Bilirubin", "Direct Bilirubin", "Total Protein", "Albumin", "AST", "ALT", "ALP", "HbA1c", "Urine Albumin", "Urine Sugar", "Pus cells", "Ketones", "HIV", "HBsAg", "HCV", "Cholesterol", "Triglycerides", "HDL Cholesterol", "LDL Cholesterol", "VLDL Cholesterol", "PT", "INR", "APTT", "Blood Culture", "Urine Culture", "ET Culture", "Sputum"];
+
+function getCustomTests() {
+  return JSON.parse(localStorage.getItem('inv_custom_tests')||'[]');
+}
+
+function setCustomTests(arr) {
+  localStorage.setItem('inv_custom_tests', JSON.stringify(arr));
+}
+
+function allTests() {
+  return defaultTests.concat(getCustomTests());
+}
+
+function buildTable(dates) {
+  const thead = document.getElementById('thead');
+  const tbody = document.getElementById('tbody');
+  // build header
+  let header = '<tr><th class="sticky">Test</th>';
+  dates.forEach((d,i) => { header += `<th>${d} <br><button onclick="removeColumn(${i})" style="background:#c0392b;padding:4px 6px;border-radius:4px;border:none;color:#fff;cursor:pointer">Remove</button></th>`; });
+  header += '</tr>';
+  thead.innerHTML = header;
+  // build body
+  tbody.innerHTML = '';
+  const tests = allTests();
+  tests.forEach((t,ri) => {
+    let row = '<tr><td class="first">';
+    // if custom test, make name editable
+    if(ri >= defaultTests.length) {
+      const idx = ri - defaultTests.length;
+      row += `<input class="custom-name" value="${t}" onchange="renameCustom({idx}, this.value)">`;
+    } else {
+      row += t;
+    }
+    row += '</td>';
+    dates.forEach((d,ci) => {
+      const key = storageKey(t, d);
+      const val = localStorage.getItem(key) || '';
+      row += `<td><input data-test="${t}" data-date="${d}" value="${escapeHtml(val)}" oninput="cellChanged(this)"></td>`;
+    });
+    row += '</tr>';
+    tbody.innerHTML += row;
+  });
+}
+
+
+function getPatientId(){
+  // patient id passed as query param ?id=123; if absent, use 'global'
+  const params = new URLSearchParams(window.location.search);
+  const pid = params.get('id') || 'global';
+  return pid;
+}
+
+function storageKey(test, date){
+  const pid = getPatientId();
+  return 'patient|' + pid + '|inv|' + test + '|' + date;
+}
+
+
+function addDateColumn(){
+  const d = prompt('Enter date for column (YYYY-MM-DD):');
+  if(!d) return;
+  const dates = getDates();
+  if(dates.includes(d)){ alert('Column for that date already exists'); return; }
+  dates.push(d);
+  localStorage.setItem('inv_dates', JSON.stringify(dates));
+  buildTable(dates);
+}
+
+function addTodayColumn(){
+  const today = new Date().toISOString().slice(0,10);
+  const dates = getDates();
+  if(dates.includes(today)){ alert('Today column already exists'); return; }
+  dates.push(today);
+  localStorage.setItem('inv_dates', JSON.stringify(dates));
+  buildTable(dates);
+}
+
+function removeColumn(index){
+  if(!confirm('Remove this date column?')) return;
+  const dates = getDates();
+  const d = dates.splice(index,1)[0];
+  allTests().forEach(t=> localStorage.removeItem(storageKey(t,d)));
+  localStorage.setItem('inv_dates', JSON.stringify(dates));
+  buildTable(dates);
+}
+
+function cellChanged(input){
+  const test = input.dataset.test;
+  const date = input.dataset.date;
+  localStorage.setItem(storageKey(test,date), input.value);
+}
+
+function getDates(){ return JSON.parse(localStorage.getItem('inv_dates')||'[]'); }
+
+function save(){ localStorage.setItem('inv_saved_at', new Date().toISOString()); alert('Saved to localStorage'); }
+
+function load(){ const dates = getDates(); buildTable(dates); alert('Loaded table with ' + dates.length + ' date column(s).'); }
+
+function exportCSV(){
+  const dates = getDates();
+  let rows = [];
+  rows.push(['Test', ...dates]);
+  allTests().forEach(t => {
+    const row = [t];
+    dates.forEach(d => { row.push(localStorage.getItem(storageKey(t,d)) || ''); });
+    rows.push(row);
+  });
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  const fname = 'investigations_' + (new Date().toISOString().slice(0,10)) + '.csv';
+  a.download = fname; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+function addCustomTest(){
+  const name = prompt('Enter name of custom test (e.g. "CRP", "ESR", or "Other")');
+  if(!name) return;
+  const arr = getCustomTests();
+  arr.push(name);
+  setCustomTests(arr);
+  buildTable(getDates());
+}
+
+function renameCustom(idx, newName){
+  const arr = getCustomTests();
+  arr[idx] = newName;
+  setCustomTests(arr);
+  buildTable(getDates());
+}
+
+function exportJSON(){
+  const obj = { dates: getDates(), tests: allTests() };
+  const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'investigations.json'; document.body.appendChild(a); a.click(); a.remove();
+}
+
+// escape HTML for input values
+function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+window.onload = function(){
+
+// show patient context (if any) at top
+(function showPatientContext(){
+  const pid = new URLSearchParams(window.location.search).get('id');
+  if(pid){
+    const el = document.getElementById('patientContext');
+    if(el) el.innerText = 'Patient ID: ' + pid + ' — investigations on this page will be saved to this patient';
+    document.title = document.title + ' - Patient ' + pid;
+  }
+})();
+ const dates = getDates(); buildTable(dates); };
+</script>
+</body>
+</html>

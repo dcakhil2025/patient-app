@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Patient Details</title>
+<style>
+body{font-family:Arial;background:#f6f8fa;padding:20px;}
+.container{max-width:900px;margin:0 auto;background:#fff;padding:16px;border-radius:8px;border:1px solid #e6e6e6;}
+.top{display:flex;justify-content:space-between;align-items:center;}
+.btn{background:#0066cc;color:#fff;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;margin-left:6px;}
+section{margin-top:12px;}
+label{font-weight:600;}
+input, textarea, select{width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:4px;}
+.table{width:100%;border-collapse:collapse;margin-top:8px;}
+.table th, .table td{border:1px solid #ddd;padding:6px;text-align:left;}
+.entry{border:1px solid #eee;padding:8px;border-radius:6px;margin-top:8px;background:#fafafa;}
+.small{color:#555;font-size:0.95em;}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top">
+    <div>
+      <h2 id="title">Patient</h2>
+      <div class="small" id="meta"></div>
+    </div>
+    <div>
+      <button class="btn" onclick="location.href='index.html'">⬅️ Dashboard</button>
+      <button class="btn" onclick="saveAll()">Save</button>
+      <button class="btn" onclick="generate()">Generate Summary</button>
+      <button class="btn" onclick="printSummary()">Print</button>
+    </div>
+  </div>
+
+  <section>
+    <label>Chief Complaints</label>
+    <textarea id="chief"></textarea>
+
+    <label>History of Presenting Illness (HOPI)</label>
+    <textarea id="hopi"></textarea>
+
+    <div style="display:flex;gap:8px;">
+      <div style="flex:1">
+        <label>Date of Admission</label>
+        <input id="doa" type="date">
+      </div>
+      <div style="flex:1">
+        <label>Date of Discharge</label>
+        <input id="dod" type="date">
+      </div>
+    </div>
+
+    <label>Past History</label>
+    <textarea id="past"></textarea>
+
+    <label>Examination Findings</label>
+    <textarea id="exam"></textarea>
+  </section>
+
+  <section>
+    <h3>Plan of Action</h3>
+    <textarea id="plan" placeholder="Plan: investigations, consults, procedures, dialysis etc."></textarea>
+  </section>
+
+  <section>
+    <h3>Daily Progress Entries</h3>
+    <label>New entry</label>
+    <textarea id="newEntry"></textarea>
+    <div style="display:flex;gap:8px;">
+      <input id="entryDate" type="date">
+      <button class="btn" onclick="addEntry()">Add Entry</button>
+      <button class="btn" onclick="clearNew()">Clear</button>
+    </div>
+    <div id="entries"></div>
+  </section>
+
+  <section>
+    <h3>Investigations</h3>
+    <p class="small">You can add investigations as rows in the table below. You can also view the uploaded Investigations Chart (PDF) and uploaded discharge template.</p>
+    <table class="table" id="invTable">
+      <thead><tr><th>Date</th><th>Test</th><th>Result</th><th>Notes</th><th>Action</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div style="margin-top:8px;">
+      <input id="invDate" type="date" style="width:160px;">
+      <input id="invTest" placeholder="Test name" style="width:calc(100% - 340px);">
+      <input id="invResult" placeholder="Result" style="width:120px;">
+      <input id="invNotes" placeholder="Notes" style="width:160px;">
+      <button class="btn" onclick="addInvestigation()">Add</button>
+    </div>
+    <div style="margin-top:10px;">
+      <a href="assets/Investigations Chart.pdf" target="_blank">Preview Investigations Chart (uploaded PDF)</a><br>
+      <a href="assets/pavithra.docx" target="_blank">Download uploaded discharge template (.docx)</a>
+    </div>
+  </section>
+
+  <section>
+    <h3>Treatment</h3>
+    <textarea id="treatment"></textarea>
+  </section>
+
+  <h3>Printable Summary</h3>
+  <pre id="summary" style="white-space:pre-wrap;border:1px solid #ddd;padding:10px;border-radius:6px;background:#fff;"></pre>
+</div>
+
+<script>
+const id = new URLSearchParams(location.search).get('id');
+let pts = JSON.parse(localStorage.getItem('patients')||'[]');
+if(!pts[id]){ alert('Patient not found'); location='index.html'; }
+let p = pts[id];
+
+function init(){
+  document.getElementById('title').innerText = p.name;
+  document.getElementById('meta').innerText = 'Age: ' + p.age + (p.meta?(' • '+p.meta):'');
+  document.getElementById('chief').value = (p.data.chief||'');
+  document.getElementById('hopi').value = (p.data.hopi||'');
+  document.getElementById('doa').value = p.data.doa||'';
+  document.getElementById('dod').value = p.data.dod||'';
+  document.getElementById('past').value = p.data.past||'';
+  document.getElementById('exam').value = p.data.exam||'';
+  document.getElementById('plan').value = p.data.plan||'';
+  document.getElementById('treatment').value = p.data.treatment||'';
+  document.getElementById('entryDate').value = new Date().toISOString().slice(0,10);
+  renderEntries();
+  renderInv();
+}
+
+function saveAll(){
+  p.data.chief = document.getElementById('chief').value;
+  p.data.hopi = document.getElementById('hopi').value;
+  p.data.doa = document.getElementById('doa').value;
+  p.data.dod = document.getElementById('dod').value;
+  p.data.past = document.getElementById('past').value;
+  p.data.exam = document.getElementById('exam').value;
+  p.data.plan = document.getElementById('plan').value;
+  p.data.treatment = document.getElementById('treatment').value;
+  pts[id]=p; localStorage.setItem('patients', JSON.stringify(pts));
+  alert('Saved');
+}
+
+function addEntry(){
+  const txt = document.getElementById('newEntry').value.trim();
+  const date = document.getElementById('entryDate').value || new Date().toISOString().slice(0,10);
+  if(!txt){ alert('Entry text required'); return; }
+  p.data.entries = p.data.entries || [];
+  p.data.entries.unshift({date:date, time: new Date().toLocaleTimeString(), text: txt});
+  localStorage.setItem('patients', JSON.stringify(pts)); renderEntries(); document.getElementById('newEntry').value='';
+}
+
+function renderEntries(){
+  const container = document.getElementById('entries');
+  container.innerHTML = '';
+  (p.data.entries||[]).forEach((e, i)=>{
+    const div = document.createElement('div'); div.className='entry';
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;"><div><b>${e.date}</b> ${e.time||''}</div>
+                     <div><button class="btn" onclick="deleteEntry(${i})" style="background:#c0392b">Delete</button></div></div>
+                     <div style="margin-top:6px;">${e.text.replace(/\n/g,'<br>')}</div>`;
+    container.appendChild(div);
+  });
+}
+
+function deleteEntry(i){ if(!confirm('Delete entry?')) return; p.data.entries.splice(i,1); localStorage.setItem('patients', JSON.stringify(pts)); renderEntries(); }
+
+function addInvestigation(){
+  const date = document.getElementById('invDate').value||new Date().toISOString().slice(0,10);
+  const test = document.getElementById('invTest').value.trim();
+  const result = document.getElementById('invResult').value.trim();
+  const notes = document.getElementById('invNotes').value.trim();
+  if(!test){ alert('Test name required'); return; }
+  p.data.investigations = p.data.investigations || [];
+  p.data.investigations.unshift({date, test, result, notes});
+  localStorage.setItem('patients', JSON.stringify(pts));
+  renderInv();
+  document.getElementById('invTest').value=''; document.getElementById('invResult').value=''; document.getElementById('invNotes').value='';
+}
+
+function renderInv(){
+  const tbody = document.querySelector('#invTable tbody');
+  tbody.innerHTML = '';
+  (p.data.investigations||[]).forEach((r,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.date}</td><td>${r.test}</td><td>${r.result||''}</td><td>${r.notes||''}</td>
+                    <td><button class="btn" onclick="deleteInv(${i})" style="background:#c0392b">Delete</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function deleteInv(i){ if(!confirm('Delete investigation?')) return; p.data.investigations.splice(i,1); localStorage.setItem('patients', JSON.stringify(pts)); renderInv(); }
+
+function generate(){
+  saveAll();
+  let s = `EAST POINT HOSPITAL\nDepartment of General Medicine\n\nName: ${p.name}\nAge: ${p.age}\n${p.meta?('Unit/Info: '+p.meta+'\n'):''}\nDiagnosis: ${p.diagnosis}\n\nChief Complaints:\n${p.data.chief||''}\n\nHOPI:\n${p.data.hopi||''}\n\nDOA: ${p.data.doa||''}    DOD: ${p.data.dod||''}\n\nPast History:\n${p.data.past||''}\n\nExamination Findings:\n${p.data.exam||''}\n\nPlan of Action:\n${p.data.plan||''}\n\nDaily Progress Entries:\n\n`;
+  (p.data.entries||[]).slice().reverse().forEach(e=>{ s += `${e.date} ${e.time||''}\n${e.text}\n\n`; });
+  s += `--- Investigations ---\n`;
+  (p.data.investigations||[]).forEach(i=>{ s += `${i.date} | ${i.test} | ${i.result||''} | ${i.notes||''}\n`; });
+  s += `\nTreatment:\n${p.data.treatment||''}\n\n(Uploaded templates available in assets)`;
+  document.getElementById('summary').innerText = s;
+}
+
+function printSummary(){ generate(); window.print(); }
+
+function saveAllShortcut(){ saveAll(); }
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Add Patient</title>
+<style>
+body{font-family:Arial;background:#f7f8fa;padding:20px;}
+.box{max-width:800px;margin:0 auto;background:#fff;padding:16px;border-radius:8px;border:1px solid #e6e6e6;}
+input, textarea{width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:4px;}
+label{font-weight:600;}
+.btn{background:#0066cc;color:#fff;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;}
+.toplink{float:right;}
+</style>
+</head>
+<body>
+<div class="box">
+  <a href="index.html" class="btn toplink">⬅️ Dashboard</a>
+  <h2>Add New Patient</h2>
+  <label>Name</label><input id="name" placeholder="Patient name">
+  <label>Age</label><input id="age" placeholder="Age">
+  <label>Diagnosis</label><input id="diagnosis" placeholder="Provisional diagnosis">
+  <label>Unit / Ward / IP No</label><input id="meta" placeholder="Unit / Ward / IP No">
+  <button class="btn" onclick="save()">Save & Open Profile</button>
+</div>
+<script>
+function save(){
+  const name=document.getElementById('name').value.trim();
+  const age=document.getElementById('age').value.trim();
+  if(!name||!age){ alert('Name and age required'); return; }
+  const diagnosis=document.getElementById('diagnosis').value.trim();
+  const meta=document.getElementById('meta').value.trim();
+  let pts=JSON.parse(localStorage.getItem('patients')||'[]');
+  const p = {name, age, diagnosis, meta, data:{ entries: [], investigations: [] }};
+  pts.push(p);
+  localStorage.setItem('patients', JSON.stringify(pts));
+  location.href = 'patient.html?id=' + (pts.length-1);
+}
+</script>
+</body>
+</html>
