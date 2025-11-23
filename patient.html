@@ -127,6 +127,10 @@ function init(){
   document.getElementById('exam').value = p.data.exam||'';
   document.getElementById('plan').value = p.data.plan||'';
   document.getElementById('treatment').value = p.data.treatment||'';
+  s = appendFacultyList(s);
+document.getElementById('summary').innerText = s;
+return s;
+
   document.getElementById('entryDate').value = new Date().toISOString().slice(0,10);
   renderEntries();
   renderInv();
@@ -152,6 +156,21 @@ function addEntry(){
   p.data.entries = p.data.entries || [];
   p.data.entries.unshift({date:date, time: new Date().toLocaleTimeString(), text: txt});
   localStorage.setItem('patients', JSON.stringify(pts)); renderEntries(); document.getElementById('newEntry').value='';
+}
+/* Add default faculty names at the end of the summary */
+function appendFacultyList(summaryText) {
+  const faculty = [
+    "Dr. VIDYA SAGAR – Professor & HOD",
+    "Dr. DINESH – Associate Professor",
+    "Dr. KOUSAR – Assistant Professor",
+    "Dr. SARITHA – Senior Resident",
+    "Dr. NIKHILESHWAR - Senior Resident",
+    "Dr. CHAITANYA AKHIL – Junior Resident",
+    "Dr. CHINMAY - Junior Resident"
+  ];
+
+  const header = "\n\n--- Faculty in Charge ---\n";
+  return summaryText + header + faculty.join("\n");
 }
 
 function renderEntries(){
