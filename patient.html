@@ -27,6 +27,8 @@ input, textarea, select{width:100%;padding:8px;margin:6px 0;border:1px solid #cc
       <button class="btn" onclick="saveAll()">Save</button>
       <button class="btn" onclick="generate()">Generate Summary</button>
       <button class="btn" onclick="printSummary()">Print</button>
+      <button class="btn" onclick="emailSummary()">📧 Email Summary</button>
+
     </div>
   </div>
 
@@ -266,6 +268,17 @@ return s;
 }
 
 function printSummary(){ generate(); window.print(); }
+  function emailSummary() {
+    const summary = generate();  // get latest summary
+
+    const subject = encodeURIComponent("Final Summary - " + p.name);
+    const body = encodeURIComponent(summary);
+
+    const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
+
+    window.location.href = mailtoLink;
+}
+
 
 function saveAllShortcut(){ saveAll(); }
 
